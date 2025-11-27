@@ -1,9 +1,15 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Load biến môi trường từ file .env
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Sử dụng SQLite file tên là test.db
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = DATABASE_URL
 
 # connect_args={"check_same_thread": False} là cần thiết riêng cho SQLite
 engine = create_engine(

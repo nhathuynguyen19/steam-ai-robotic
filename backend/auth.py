@@ -6,10 +6,18 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 import models, schemas, database
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = "mysecretkey_change_me"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# 1. Load biến môi trường
+load_dotenv()
+
+# 2. Lấy giá trị từ .env
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256") # Nếu không thấy thì mặc định là HS256
+
+# Lưu ý quan trọng: Biến môi trường luôn là String, phải ép kiểu về int
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
