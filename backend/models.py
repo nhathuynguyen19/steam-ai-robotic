@@ -1,6 +1,7 @@
 from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
+import enum
 
 class User(Base):
     __tablename__ = "users"
@@ -32,6 +33,10 @@ class Event(Base):
 
     # Quan hệ ngược lại bảng user_event
     participants = relationship("UserEvent", back_populates="event")
+    
+class EventRole(str, enum.Enum):
+    INSTRUCTOR = "instructor"   # Giảng viên/Người hướng dẫn
+    TA = "ta"                   # Trợ giảng
 
 class UserEvent(Base):
     __tablename__ = "user_event"
@@ -40,7 +45,7 @@ class UserEvent(Base):
     event_id = Column(Integer, ForeignKey("events.event_id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
     
-    role = Column(String, default="participant") # Role trong sự kiện: participant, staff...
+    role = Column(String, default=EventRole.TA) # Role trong sự kiện: participant, staff...
     check_image = Column(Text, nullable=True)    # CLOB trong SQLite map là Text
 
     user = relationship("User", back_populates="events")

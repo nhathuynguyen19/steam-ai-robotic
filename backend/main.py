@@ -7,6 +7,7 @@ from email_utils import send_verification_email
 from jose import jwt, JWTError
 from fastapi.staticfiles import StaticFiles # <--- Import cái này
 from fastapi.openapi.docs import get_redoc_html # <--- Import cái này
+from models import EventRole
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -148,7 +149,7 @@ def read_events(skip: int = 0, limit: int = 100, db: Session = Depends(database.
 @app.post("/events/{event_id}/join")
 def join_event(
     event_id: int,
-    role: str = "participant", # Query param hoặc body
+    role: str = EventRole.TA, # Query param hoặc body
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -168,9 +169,6 @@ def join_event(
     # 3. Tạo link
     user_event = models.UserEvent(user_id=current_user.user_id, event_id=event_id, role=role)
     db.add(user_event)
-    
-    # Optional: Tăng số lượng student
-    event.number_of_student += 1
     
     db.commit()
     return {"detail": "Joined event successfully"}

@@ -13,11 +13,11 @@ import os
 load_dotenv()
 
 # 2. Lấy giá trị từ .env
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "123test")
 ALGORITHM = os.getenv("ALGORITHM", "HS256") # Nếu không thấy thì mặc định là HS256
 
 # Lưu ý quan trọng: Biến môi trường luôn là String, phải ép kiểu về int
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
