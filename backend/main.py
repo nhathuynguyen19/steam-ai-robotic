@@ -29,6 +29,7 @@ import core.security as security
 
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
+from fastapi.responses import HTMLResponse, RedirectResponse # <--- Thêm RedirectResponse
 
 # from backend import models, schemas, auth, database
 # from backend.models import EventRole
@@ -76,8 +77,35 @@ async def redoc_html():
 # AUTH HTML PAGES
 # ============================
 
+# backend/main.py
+
 @app.get("/", response_class=HTMLResponse)
-def page_home(request: Request):
+async def page_home(request: Request, db: Session = Depends(database.get_db)):
+    # 1. Lấy token từ cookie
+    token = request.cookies.get("access_token")
+    
+    if token:
+        # Cookie thường lưu dạng "Bearer <token>", cần tách ra
+        if token.startswith("Bearer "):
+            token = token.split(" ")[1]
+            
+        try:
+            # 2. Giải mã token để lấy email
+            payload = jwt.decode(token, security.SECRET_KEY, algorithms=[security.ALGORITHM])
+            email: str = payload.get("sub")
+            
+            # 3. Kiểm tra user trong DB (để chắc chắn user chưa bị xóa/khóa)
+            if email:
+                user = db.query(models.User).filter(models.User.email == email).first()
+                if user and user.status:
+                    # 4. Token hợp lệ -> Chuyển hướng sang trang events
+                    return RedirectResponse(url="/events", status_code=302)
+                    
+        except (jwt.JWTError, Exception):
+            # Nếu token lỗi, hết hạn hoặc user không tồn tại -> Bỏ qua, xuống dưới hiện login
+            pass
+
+    # 5. Nếu không có token hợp lệ -> Hiện trang đăng nhập
     return templates.TemplateResponse("auth/login.html", {"request": request})
 
 @app.get("/login/", response_class=HTMLResponse)
@@ -105,7 +133,7 @@ def forgot_password(email: str = Form(...), request: Request = None):
 async def verify_email(request: Request, token: str, db: Session = Depends(database.get_db)):
     """Xác thực email."""
     try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        payload = jwt.decode(token, security.SECRET_KEY, algorithms=[security.ALGORITHM])
         email = payload.get("sub")
     except:
         return templates.TemplateResponse(

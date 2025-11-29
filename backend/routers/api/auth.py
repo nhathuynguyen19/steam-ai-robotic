@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Annotated
-from fastapi import Depends, HTTPException, status, APIRouter, BackgroundTasks, Request
+from fastapi import Depends, HTTPException, status, APIRouter, BackgroundTasks, Request, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 # from passlib.context import CryptContext
@@ -13,6 +13,7 @@ from utils.email_utils import send_verification_email
 import core.security as security
 import re
 from core.limiter import limiter
+from fastapi.responses import RedirectResponse
 
 router = APIRouter(
     prefix="/api/auth",
@@ -28,6 +29,7 @@ def get_limiter(request: Request):
 @limiter.limit("5/minute")
 async def signin_for_access_token(
     request: Request,
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(database.get_db)
 ):
@@ -95,7 +97,7 @@ async def signin_for_access_token(
             background_tasks = BackgroundTasks()
             background_tasks.add_task(
                 send_verification_email, 
-                to_email=user.email, 
+                email=user.email, 
                 token=verification_token
             )
             await background_tasks()
@@ -143,6 +145,16 @@ async def signin_for_access_token(
         expires_delta=timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
+    # Gắn token vào cookie tên là "access_token"
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,  # Quan trọng: Chặn JavaScript đọc cookie này (chống XSS)
+        max_age=1800,   # Token hết hạn sau 30 phút
+        samesite="lax", 
+        secure=False    # Đặt True nếu chạy https
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 # send verification email
@@ -169,7 +181,7 @@ async def send_verification_email_endpoint(
     # Gửi email trong background
     background_tasks.add_task(
         send_verification_email, 
-        to_email=user.email, 
+        email=user.email, 
         token=verification_token
     )
     

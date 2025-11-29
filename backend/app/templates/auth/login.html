@@ -6,9 +6,11 @@
   <h2>Đăng nhập</h2>
 
   <form
-    hx-post="/login"
+    hx-post="/api/auth/signin/"
     hx-target="#login-msg"
     hx-swap="innerHTML"
+    class="auth-form"
+    method="POST"
   >
     <label>Email</label>
     <input name="username" type="email" required>
