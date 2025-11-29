@@ -1,26 +1,23 @@
+import os
+from dotenv import load_dotenv
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import database, models, schemas
 from sqlalchemy.orm import Session
-import models, schemas, database
-from dotenv import load_dotenv
-import os
 
-# 1. Load biến môi trường
 load_dotenv()
 
-# 2. Lấy giá trị từ .env
 SECRET_KEY = os.getenv("SECRET_KEY", "123test")
-ALGORITHM = os.getenv("ALGORITHM", "HS256") # Nếu không thấy thì mặc định là HS256
-
-# Lưu ý quan trọng: Biến môi trường luôn là String, phải ép kiểu về int
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/signin")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -59,8 +56,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
         raise credentials_exception
     return user
 
-# Dependency phân quyền mới
 async def get_current_admin_user(current_user: Annotated[models.User, Depends(get_current_user)]):
-    if current_user.role != "admin": # Check string role
+    if current_user.role != schemas.UserRole.ADMIN.value: # Check string role
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user

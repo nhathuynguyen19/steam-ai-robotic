@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Column, Integer, String, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
 import enum
+from schemas import *
 
 class User(Base):
     __tablename__ = "users"
@@ -25,18 +26,16 @@ class Event(Base):
     event_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, nullable=False)
     day_start = Column(Date, nullable=False)
-    from_time = Column(Integer, nullable=False) # Ví dụ: 800 (8:00 AM) hoặc phút
+    from_time = Column(Integer, nullable=False) # 
     to_time = Column(Integer, nullable=False)
     number_of_student = Column(Integer, default=0)
     status = Column(String, default="upcoming") # upcoming, ongoing, finished
     school_name = Column(String, nullable=True)
+    max_user_joined = Column(Integer, nullable=False)
 
     # Quan hệ ngược lại bảng user_event
     participants = relationship("UserEvent", back_populates="event")
     
-class EventRole(str, enum.Enum):
-    INSTRUCTOR = "instructor"   # Giảng viên/Người hướng dẫn
-    TA = "ta"                   # Trợ giảng
 
 class UserEvent(Base):
     __tablename__ = "user_event"
@@ -45,8 +44,8 @@ class UserEvent(Base):
     event_id = Column(Integer, ForeignKey("events.event_id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
     
-    role = Column(String, default=EventRole.TA) # Role trong sự kiện: participant, staff...
-    check_image = Column(Text, nullable=True)    # CLOB trong SQLite map là Text
+    role = Column(String, default=EventRole.TA.value)  # instructor, ta
+    status = Column(String, default="registered") # registered, attended, cancelled
 
     user = relationship("User", back_populates="events")
     event = relationship("Event", back_populates="participants")
