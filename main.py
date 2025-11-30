@@ -35,7 +35,7 @@ from typing import Optional
 from routers.api.events import PERIOD_END_TIMES
 
 
-from routers.api.pages import auth as auth_page
+from routers.pages import auth as auth_page
 
 # from backend import models, schemas, auth, database
 # from backend.models import EventRole

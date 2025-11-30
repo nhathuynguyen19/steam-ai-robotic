@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 router = APIRouter(
     prefix="/auth",
@@ -20,4 +20,4 @@ router.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="s
 def page_signin(request: Request, user: models.User | None = Depends(security.get_user_from_cookie)):
     if user:
         return RedirectResponse(url="/base.html", status_code=302)
-    return templates.TemplateResponse("pages/auth/signin.html", {"request": request})
+    return templates.TemplateResponse("/pages/signin.html", {"request": request})
