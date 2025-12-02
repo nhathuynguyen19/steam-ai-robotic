@@ -17,6 +17,7 @@ class User(Base):
     name_bank = Column(String, nullable=True)
     bank_number = Column(String, nullable=True)
     token_version = Column(Integer, default=0)
+    is_deleted = Column(Boolean, default=False)
 
     # Quan hệ ngược lại bảng user_event
     events = relationship("UserEvent", back_populates="user")

@@ -27,7 +27,8 @@ def get_all_users(
     limit: int = 100, 
     db: Session = Depends(database.get_db)
 ):
-    users = db.query(models.User).offset(skip).limit(limit).all()
+    # Thêm filter(models.User.is_deleted == False)
+    users = db.query(models.User).filter(models.User.is_deleted == False).offset(skip).limit(limit).all()
     return users
 
 # 2. Admin tạo User mới (Set được Role & Status luôn)
@@ -82,11 +83,27 @@ def update_user_by_admin(
 
 # 4. Admin xóa User
 @router.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(database.get_db)):
-    db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+async def delete_user(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_admin_from_cookie)
+):
+    user_to_delete = db.query(models.User).filter(models.User.user_id == user_id).first()
+    if not user_to_delete:
+         raise HTTPException(status_code=404, detail="User not found")
+     
+    # Kiểm tra tồn tại và chưa bị xóa
+    if not user_to_delete or user_to_delete.is_deleted:
+         raise HTTPException(status_code=404, detail="User not found")
+     
+    # Không cho phép tự xóa chính mình
+    if user_to_delete.user_id == current_user.user_id:
+         raise HTTPException(status_code=400, detail="Không thể xóa tài khoản đang đăng nhập")
+
+    # [THAY ĐỔI] Thay vì db.delete(), ta update trạng thái
+    user_to_delete.is_deleted = True
+    user_to_delete.status = False # Tắt kích hoạt luôn để không đăng nhập được
     
-    db.delete(db_user)
     db.commit()
-    return {"detail": "User deleted successfully"}
+    
+    return {"message": "User deleted successfully"}

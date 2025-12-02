@@ -255,7 +255,8 @@
             </td>
             <td class="text-center">
               <div class="d-flex justify-content-center align-items-center">
-                {% if user and user.role == 'admin' %}
+                {% if user and user.role == 'admin' %} {# --- Nút Sửa (Code cũ)
+                --- #}
                 <a
                   href="/events/{{ event.event_id }}/edit"
                   class="btn btn-outline-primary btn-sm me-2 shadow-sm"
@@ -263,8 +264,30 @@
                 >
                   <i class="bi bi-pencil-square"></i>
                 </a>
-                {% endif %} {% if event.attendance_status == 'attended' %} {%
-                elif event.is_joined %} {% else %} {% endif %}
+
+                {# --- [MỚI] Logic Nút Khóa / Mở khóa --- #} {% if
+                event.is_locked %}
+                <button
+                  class="btn btn-outline-secondary btn-sm shadow-sm me-2"
+                  title="Mở khóa đăng ký"
+                  hx-post="/api/events/{{ event.event_id }}/unlock"
+                  hx-target="#events-table"
+                  hx-swap="none"
+                >
+                  <i class="bi bi-unlock-fill"></i>
+                </button>
+                {% else %} {% if not event.is_ended %}
+                <button
+                  class="btn btn-outline-warning btn-sm shadow-sm me-2"
+                  title="Khóa đăng ký (Không cho tham gia nữa)"
+                  hx-confirm="Bạn có chắc chắn muốn KHÓA sự kiện này? Sinh viên sẽ không thể đăng ký tham gia được nữa."
+                  hx-post="/api/events/{{ event.event_id }}/lock"
+                  hx-target="#events-table"
+                  hx-swap="none"
+                >
+                  <i class="bi bi-lock-fill"></i>
+                </button>
+                {% endif %} {% endif %} {% endif %}
               </div>
             </td>
           </tr>

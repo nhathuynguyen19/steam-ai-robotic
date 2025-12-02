@@ -92,6 +92,15 @@
                 khoản</a
               >
             </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <a
+                class="dropdown-item {% if '/admin/users' in request.url.path and '/create' not in request.url.path %}active{% endif %}"
+                href="/admin/users"
+              >
+                <i class="bi bi-people me-2 text-info"></i>Quản lý Users</a
+              >
+            </li>
           </ul>
         </li>
         {% endif %}
@@ -99,13 +108,17 @@
         <li
           class="nav-item border-start ms-lg-3 ps-lg-3 mt-2 mt-lg-0 d-flex align-items-center"
         >
-          <span class="text-muted me-3 d-none d-lg-block small">
-            Xin chào,
-            <strong
+          <a
+            href="/profile"
+            class="text-decoration-none me-3 d-none d-lg-block"
+            title="Xem hồ sơ cá nhân"
+          >
+            <span class="text-muted small">Xin chào,</span>
+            <strong class="text-dark"
               >{{ user.full_name if user.full_name else user.email.split('@')[0]
               }}</strong
             >
-          </span>
+          </a>
 
           <button
             class="btn btn-outline-danger btn-sm rounded-pill px-3"
