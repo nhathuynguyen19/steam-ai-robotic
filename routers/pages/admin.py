@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
 from typing import Annotated, Optional
+from pydantic import ValidationError
 
 import database
 import models
@@ -53,9 +54,6 @@ async def create_user_action(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(security.get_current_admin_from_cookie)
 ):
-    # Logic xử lý chuỗi rỗng thành None để lưu vào DB sạch hơn
-    if full_name == "": full_name = None
-    if phone == "": phone = None
 
     try:
         # Validate dữ liệu
@@ -94,16 +92,31 @@ async def create_user_action(
             }
         )
 
-    except Exception as e:
+    except ValidationError as e:
         db.rollback()
         # Xử lý thông báo lỗi hiển thị cho đẹp
-        error_msg = str(e).replace("Value error, ", "")
+        error_msg = str(e.errors()[0].get("msg")).replace("Value error, ", "")
         return templates.TemplateResponse(
             "pages/admin/create_user.html",
             {
                 "request": request,
                 "user": current_user,
                 "error": error_msg,
+                "form_data": { # Giữ lại dữ liệu cũ khi lỗi
+                    "email": email,
+                    "full_name": full_name,
+                    "phone": phone,
+                    "role": role
+                }
+            }
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "pages/admin/create_user.html",
+            {
+                "request": request,
+                "user": current_user,
+                "error": e,
                 "form_data": { # Giữ lại dữ liệu cũ khi lỗi
                     "email": email,
                     "full_name": full_name,
