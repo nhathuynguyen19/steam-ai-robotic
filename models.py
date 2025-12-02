@@ -8,9 +8,9 @@ class User(Base):
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    full_name = Column(String, nullable=True)
+    full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    phone = Column(String, unique=True, index=True, nullable=True)
+    phone = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     status = Column(Boolean, default=False) # True: Active
     role = Column(String, default='user')  # 'user', 'admin'

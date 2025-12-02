@@ -1,7 +1,7 @@
 <div
   class="card border-0 shadow-sm rounded-4 overflow-hidden mt-4"
   id="events-list-container"
-  hx-get="/partials/events-table"
+  hx-get="/partials/events-table/?tab={{ tab }}"
   hx-trigger="event_updated from:body"
   hx-swap="outerHTML"
 >
@@ -251,6 +251,20 @@
                 {% else %}
                 <span class="text-muted small fst-italic">Đã kết thúc</span>
                 {% endif %} {% endif %} {% endif %}
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="d-flex justify-content-center align-items-center">
+                {% if user and user.role == 'admin' %}
+                <a
+                  href="/events/{{ event.event_id }}/edit"
+                  class="btn btn-outline-primary btn-sm me-2 shadow-sm"
+                  title="Cập nhật sự kiện"
+                >
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+                {% endif %} {% if event.attendance_status == 'attended' %} {%
+                elif event.is_joined %} {% else %} {% endif %}
               </div>
             </td>
           </tr>

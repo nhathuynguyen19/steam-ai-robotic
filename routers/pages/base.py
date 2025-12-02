@@ -34,7 +34,7 @@ def get_events(request: Request,
              user: models.User | None = Depends(security.get_user_from_cookie)
 ):
     if user:
-        return templates.TemplateResponse("/base.html", {
+        return templates.TemplateResponse("/pages/events.html", {
             "request": request, 
             "user": user,
             "tab": tab
