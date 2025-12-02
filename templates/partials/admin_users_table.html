@@ -1,3 +1,10 @@
+
+<style>
+  .hidden-phone {
+    cursor: pointer;
+    user-select: none;
+  }
+</style>
 <div id="users-table-container">
   <div class="table-responsive bg-white rounded-3 shadow-sm border">
     <table class="table table-hover align-middle mb-0">
@@ -6,9 +13,9 @@
           <th class="py-3 ps-4">ID</th>
           <th class="py-3">Họ và tên</th>
           <th class="py-3">Email</th>
-          <th class="py-3">SDT</th>
-          <th class="py-3">Ngan hang</th>
-          <th class="py-3">STK</th>
+          <th class="py-3 text-center">SĐT</th>
+          <th class="py-3 text-center">Ngân hàng</th>
+          <th class="py-3 text-center">STK</th>
           <th class="py-3 text-center">Vai trò</th>
           <th class="py-3 text-center">Trạng thái</th>
           <th class="py-3 text-end pe-4">Hành động</th>
@@ -24,12 +31,12 @@
         {% endif %} {% for u in users %}
         <tr>
           <td class="ps-4 text-muted small">#{{ u.user_id }}</td>
-          <td class="fw-medium">{{ u.full_name }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.phone }}</td>
-          <td>{{ u.name_bank }}</td>
-          <td>{{ u.bank_number }}</td>
-          <td class="text-center">
+          <td class="fw-medium small">{{ u.full_name }}</td>
+          <td class="small">{{ u.email }}</td>
+          <td class="hidden-phone text-center small" data-phone="{{ u.phone }}">**********</td>
+          <td class="small text-center">{{ u.name_bank }}</td>
+          <td class="small text-center">{{ u.bank_number }}</td>
+          <td class="text-center small">
             {% if u.role == 'admin' %}
             <span
               class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill"
@@ -116,4 +123,17 @@
     </ul>
   </nav>
   {% endif %}
+  <script>
+  document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("hidden-phone")) {
+      const td = e.target
+      if (td.innerText === "**********") {
+        td.innerText = td.dataset.phone
+      } else {
+        td.innerText = "**********"
+      }
+    }
+  })
+  </script>
+
 </div>
