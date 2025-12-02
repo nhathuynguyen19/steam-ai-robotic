@@ -18,6 +18,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "123test")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
+RESET_PASSWORD_EXPIRE_MINUTES = 15
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -124,3 +125,17 @@ async def get_current_admin_from_cookie(
         )
     
     return user
+
+def create_reset_password_token(email: str):
+    expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode = {"sub": email, "purpose": "reset_password", "exp": expire}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_reset_password_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") != "reset_password":
+            return None
+        return payload.get("sub")  # Trả email
+    except:
+        return None

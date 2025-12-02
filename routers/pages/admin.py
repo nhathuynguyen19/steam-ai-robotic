@@ -97,7 +97,8 @@ async def create_user_action(
     except Exception as e:
         db.rollback()
         # Xử lý thông báo lỗi hiển thị cho đẹp
-        error_msg = str(e).replace("Value error, ", "")
+        error_msg = str(e.errors()[0].get('msg')).replace("Value error, ", "")
+        print(error_msg)
         return templates.TemplateResponse(
             "pages/admin/create_user.html",
             {

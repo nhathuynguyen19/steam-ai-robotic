@@ -18,7 +18,7 @@ conf = ConnectionConfig(
 
 async def send_verification_email(email: str, token: str):
     # Lấy domain từ biến môi trường
-    domain = os.getenv("DOMAIN", "http://127.0.0.1:8000")
+    domain = os.getenv("DOMAIN", "http://127.0.0.1:8001")
     
     # Tạo link kích hoạt
     url = f"{domain}/verify-email?token={token}"
@@ -33,6 +33,29 @@ async def send_verification_email(email: str, token: str):
 
     message = MessageSchema(
         subject="Kích hoạt tài khoản của bạn",
+        recipients=[email],
+        body=html,
+        subtype=MessageType.html
+    )
+
+    fm = FastMail(conf)
+    await fm.send_message(message)
+
+
+async def send_reset_password_email(email: str, token: str):
+    domain = os.getenv("DOMAIN", "http://127.0.0.1:8001")
+    url = f"{domain}/auth/reset_password?token={token}"
+
+    html = f"""
+    <h3>Khôi phục mật khẩu</h3>
+    <p>Bạn đã yêu cầu đặt lại mật khẩu. Nhấn vào link dưới đây để tiếp tục:</p>
+    <p><a href="{url}">{url}</a></p>
+    <br>
+    <p>Link sẽ hết hạn sau 15 phút.</p>
+    """
+
+    message = MessageSchema(
+        subject="Khôi phục mật khẩu",
         recipients=[email],
         body=html,
         subtype=MessageType.html

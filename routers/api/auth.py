@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Annotated
-from fastapi import Depends, HTTPException, status, APIRouter, BackgroundTasks, Request, Response
+from fastapi import Depends, HTTPException, status, APIRouter, BackgroundTasks, Request, Response, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -8,10 +8,14 @@ from sqlalchemy.exc import IntegrityError
 import models, schemas, database
 from dotenv import load_dotenv
 import os
-from utils.email_utils import send_verification_email
+from utils.email_utils import send_verification_email, send_reset_password_email
 import helpers.security as security
 import re
 from helpers.limiter import limiter
+from helpers.security import create_reset_password_token, verify_reset_password_token
+from models import User
+from helpers.security import get_password_hash
+
 
 router = APIRouter(
     prefix="/api/auth",
@@ -147,6 +151,68 @@ async def signin_for_access_token(
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/forgot_password/")
+async def forgot_password(
+    background_tasks: BackgroundTasks,
+    email: str = Form(...),
+    db: Session = Depends(database.get_db)
+):
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        return """
+        <div class="alert alert-danger mt-3">
+            Email không tồn tại trong hệ thống!
+        </div>
+        """
+
+    # Tạo token JWT cho reset password
+    token = create_reset_password_token(user.email)
+
+    # Gửi email chạy nền
+    background_tasks.add_task(send_reset_password_email, email, token)
+
+    return """
+    <div class="alert alert-success mt-3">
+        Email khôi phục mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư của bạn.
+    </div>
+    """
+
+@router.post("/reset_password/")
+async def reset_password(
+    token: str = Form(...),
+    new_password: str = Form(...),
+    db: Session = Depends(database.get_db)
+):
+    email = verify_reset_password_token(token)
+
+    if not email:
+        return """
+        <div class="alert alert-danger mt-3">
+            Token không hợp lệ hoặc đã hết hạn!
+        </div>
+        """
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        return """
+        <div class="alert alert-danger mt-3">
+            Không tìm thấy tài khoản!
+        </div>
+        """
+
+    # Cập nhật mật khẩu mới
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+
+    return """
+    <div class="alert alert-success mt-3">
+        Mật khẩu đã được thay đổi thành công! Bạn có thể quay lại đăng nhập.
+    </div>
+    """
+
 
 
 @router.post("/signout/")
