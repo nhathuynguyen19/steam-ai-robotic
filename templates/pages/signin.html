@@ -39,6 +39,17 @@
         border-color: #86b7fe;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
       }
+      /* Hiệu ứng focus bao quanh cả khung */
+        .password-group:focus-within {
+          border-color: #0d6efd !important; /* Màu xanh primary */
+          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+          transition: all 0.2s ease;
+        }
+        /* Icon đổi màu khi hover */
+        #togglePassword:hover {
+          color: #0d6efd !important;
+          background-color: #f8f9fa !important;
+        }
     </style>
   </head>
   <body class="d-flex align-items-center min-vh-100 py-5">
@@ -55,10 +66,10 @@
               style="object-fit: cover"
             />
             <h4 class="fw-bold text-dark mb-0">HUSC AI & ROBOTICS</h4>
-            <p class="text-muted small">Cổng thông tin sự kiện & đào tạo</p>
+            <p class="text-muted small">Cổng đăng ký hỗ trợ trải nghiệm</p>
           </div>
 
-          <div class="card auth-card p-4 bg-white">
+          <div class="card auth-card p-3 bg-white">
             <div class="card-body">
               <h5 class="card-title text-center mb-4 fw-bold text-primary">
                 Đăng nhập hệ thống
@@ -82,16 +93,26 @@
                   <label for="username">Email đăng nhập</label>
                 </div>
 
-                <div class="form-floating mb-3">
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="password"
-                    name="password"
-                    placeholder="Password"
-                    required
-                  />
-                  <label for="password">Mật khẩu</label>
+              <div class="input-group password-group border rounded-3 overflow-hidden">
+                  <div class="form-floating flex-grow-1">
+                    <input
+                      type="password"
+                      class="form-control border-0 shadow-none"
+                      id="password"
+                      name="password"
+                      placeholder="Nhập mật khẩu"
+                      required
+                    />
+                    <label for="password">Mật khẩu</label>
+                  </div>
+                  <button
+                    class="btn btn-light border-0 bg-white text-secondary px-3"
+                    type="button"
+                    id="togglePassword"
+                    style="z-index: 5;"
+                  >
+                    <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                  </button>
                 </div>
 
                 <div id="signin-msg" class="mb-3"></div>
@@ -127,6 +148,9 @@
                 >
                   <i class="bi bi-box-arrow-in-right me-2"></i> Đăng nhập
                 </button>
+                <span class="text-muted small d-block mt-2 text-center">
+                  Tối đa 5 lần thử mỗi phút
+                </span>
               </form>
             </div>
           </div>
@@ -184,6 +208,20 @@
             }
           }
         }
+      });
+
+      // xu ly hien mat khau
+      const togglePassword = document.getElementById("togglePassword");
+      const passwordInput = document.getElementById("password");
+
+      togglePassword.addEventListener("click", () => {
+        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+        passwordInput.setAttribute("type", type);
+
+        // đổi icon
+        togglePassword.innerHTML = type === "password" 
+          ? '<i class="bi bi-eye"></i>' 
+          : '<i class="bi bi-eye-slash"></i>';
       });
     </script>
 
