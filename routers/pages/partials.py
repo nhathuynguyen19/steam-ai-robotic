@@ -8,8 +8,7 @@ from schemas import EventRole
 from datetime import datetime, date, time
 from pathlib import Path
 from fastapi.templating import Jinja2Templates
-
-
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -91,7 +90,7 @@ async def render_events_table(
         .all()
 
     filtered_events = []
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).replace(tzinfo=None)
 
     # 2. Lọc sự kiện theo Tab
     for event in all_events:

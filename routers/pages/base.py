@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session  # [Thêm] Để khai báo kiểu dữ liệu
 from datetime import date           # [Thêm] Để lấy ngày hiện tại
 import database, schemas
 from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -58,7 +59,7 @@ async def root(
     user: models.User | None = Depends(security.get_user_from_cookie),
 ):
     if user:
-        now = datetime.now()
+        now = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).replace(tzinfo=None)
         today = now.date()
         
         # 1. Đếm sự kiện ở các NGÀY KHÁC (Dùng SQL cho nhanh)
