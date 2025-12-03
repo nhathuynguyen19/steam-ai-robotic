@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi.responses import HTMLResponse, RedirectResponse # <--- Thêm RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -136,8 +137,8 @@ async def delete_user(
 
     # [THAY ĐỔI] Thay vì db.delete(), ta update trạng thái
     user_to_delete.is_deleted = True
-    user_to_delete.email += str(datetime.now())
-    user_to_delete.phone += str(datetime.now())
+    user_to_delete.email += str(datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).replace(tzinfo=None))
+    user_to_delete.phone += str(datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).replace(tzinfo=None))
     user_to_delete.status = False # Tắt kích hoạt luôn để không đăng nhập được
     
     db.commit()
