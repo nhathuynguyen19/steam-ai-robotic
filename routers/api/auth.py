@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 from fastapi import Depends, HTTPException, status, APIRouter, BackgroundTasks, Request, Response, Form
+from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -14,8 +15,13 @@ import re
 from helpers.limiter import limiter
 from helpers.security import create_reset_password_token, verify_reset_password_token
 from models import User
+from pathlib import Path
 from helpers.security import get_password_hash
+from fastapi.templating import Jinja2Templates
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 router = APIRouter(
     prefix="/api/auth",
@@ -82,7 +88,7 @@ def create_first_super_admin(db: Session, form_data: OAuth2PasswordRequestForm):
 # --- MAIN AUTH ROUTES ---
 
 @router.post("/signin/", response_model=schemas.Token)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def signin_for_access_token(
     request: Request,
     response: Response,
@@ -154,66 +160,81 @@ async def signin_for_access_token(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/forgot_password/")
+@router.post("/forgot_password")
 async def forgot_password(
+    request: Request,
     background_tasks: BackgroundTasks,
     email: str = Form(...),
     db: Session = Depends(database.get_db)
 ):
     user = db.query(User).filter(User.email == email).first()
 
+    # Email không tồn tại → quay lại trang forgot & báo lỗi
     if not user:
-        return """
-        <div class="alert alert-danger mt-3">
-            Email không tồn tại trong hệ thống!
-        </div>
-        """
+        return templates.TemplateResponse(
+            "pages/auth/forgot_password.html",
+            {
+                "request": request,
+                "error": "Email không tồn tại trong hệ thống!"
+            }
+        )
 
-    # Tạo token JWT cho reset password
+    # Tạo token
     token = create_reset_password_token(user.email)
 
     # Gửi email chạy nền
     background_tasks.add_task(send_reset_password_email, email, token)
 
-    return """
-    <div class="alert alert-success mt-3">
-        Email khôi phục mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư của bạn.
-    </div>
-    """
+    # Thành công → render lại đúng trang forgot kèm thông báo
+    return templates.TemplateResponse(
+        "pages/auth/forgot_password.html",
+        {
+            "request": request,
+            "success": "Email khôi phục đã được gửi! Hãy kiểm tra hộp thư."
+        }
+    )
+
 
 @router.post("/reset_password/")
 async def reset_password(
     token: str = Form(...),
     new_password: str = Form(...),
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(database.get_db),
 ):
     email = verify_reset_password_token(token)
 
     if not email:
-        return """
+        return HTMLResponse("""
         <div class="alert alert-danger mt-3">
             Token không hợp lệ hoặc đã hết hạn!
         </div>
-        """
+        """)
 
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
-        return """
+        return HTMLResponse("""
         <div class="alert alert-danger mt-3">
             Không tìm thấy tài khoản!
         </div>
-        """
+        """)
 
-    # Cập nhật mật khẩu mới
+    # Cập nhật mật khẩu
     user.hashed_password = get_password_hash(new_password)
     db.commit()
 
-    return """
+    # THÀNH CÔNG + AUTO REDIRECT BẰNG SCRIPT
+    return HTMLResponse("""
     <div class="alert alert-success mt-3">
-        Mật khẩu đã được thay đổi thành công! Bạn có thể quay lại đăng nhập.
+        Mật khẩu đã được thay đổi thành công! Đang chuyển hướng...
     </div>
-    """
+    <script>
+        setTimeout(() => {
+            window.location.href = "/auth/signin";
+        }, 1500);
+    </script>
+    """)
+
 
 
 

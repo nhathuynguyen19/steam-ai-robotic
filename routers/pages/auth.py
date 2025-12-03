@@ -34,8 +34,6 @@ async def get_forgot_password_page(request: Request):
         "pages/auth/forgot_password.html",
         {
             "request": request,
-            "error": None,
-            "success": None
         }
     )
 
