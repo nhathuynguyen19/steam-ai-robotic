@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from zoneinfo import ZoneInfo
 from utils.constants import PERIOD_START_TIMES, PERIOD_END_TIMES
+from helpers.security import *
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -31,7 +32,7 @@ def get_event_times(event_day: date, start_period: int, end_period: int):
 
 # xem su kien by id
 @router.get("/{event_id}", response_model=schemas.EventResponse)
-def read_event(event_id: int, db: Session = Depends(database.get_db), current_user = Depends(security.get_current_user)):
+def read_event(event_id: int, db: Session = Depends(database.get_db), current_user = Depends(security.get_user_from_cookie)):
     event = db\
         .query(models.Event)\
         .options(joinedload(models.Event.participants))\
@@ -42,7 +43,7 @@ def read_event(event_id: int, db: Session = Depends(database.get_db), current_us
     return event
 
 @router.get("", response_model=list[schemas.EventResponse])
-def read_events(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db), current_user = Depends(security.get_current_user)):
+def read_events(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db), current_user = Depends(security.get_user_from_cookie)):
     events = db\
         .query(models.Event)\
         .options(joinedload(models.Event.participants))\
@@ -55,7 +56,7 @@ def read_events(skip: int = 0, limit: int = 100, db: Session = Depends(database.
 async def render_events_table(
     request: Request,
     db: Session = Depends(database.get_db),
-    current_user = Depends(security.get_current_user)
+    current_user = Depends(security.get_user_from_cookie)
 ):
     if not current_user:
         return templates.TemplateResponse(
@@ -69,7 +70,7 @@ async def render_events_table(
 def create_event(
     event: schemas.EventCreate, 
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(security.get_current_admin_user)
+    current_user: models.User = Depends(security.get_current_admin_from_cookie)
 ):
     new_event = models.Event(**event.dict())
     try:
@@ -88,7 +89,7 @@ def update_event(
     event_id: int,
     event_update: schemas.EventCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(security.get_current_admin_user)
+    current_user: models.User = Depends(security.get_current_admin_from_cookie)
 ):
     event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
     if not event:
@@ -112,7 +113,7 @@ def update_event(
 def delete_event(
     event_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(security.get_current_admin_user)
+    current_user: models.User = Depends(security.get_current_admin_from_cookie)
 ):
     event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
     if not event:

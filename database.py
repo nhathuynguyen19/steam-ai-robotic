@@ -4,33 +4,15 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Load biến môi trường từ file .env
-
-# Sử dụng SQLite file tên là test.db
+load_dotenv()
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-
-# 2. Cấu hình connect_args động
-connect_args = {}
-if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
-    # Chỉ thêm tham số này nếu đang dùng SQLite
-    connect_args = {"check_same_thread": False}
-
-# 3. Tạo engine với connect_args phù hợp
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args=connect_args
-)
-    
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
-from models import *
-
-# Dependency để lấy DB session
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
-        db.close()
+        db.close() 
