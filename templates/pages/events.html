@@ -116,4 +116,49 @@ endblock %} {% block content %}
     <p class="mt-3 text-secondary fw-medium">Đang tải dữ liệu sự kiện...</p>
   </div>
 </div>
+
+<div class="modal fade" id="manageMembersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">Quản lý nhân sự</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="manageMembersModalBody">
+                </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Chọn thành viên</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-toggle="modal" data-bs-target="#manageMembersModal"></button>
+            </div>
+            
+            <div class="modal-body" id="modal-select-users-body">
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Biến toàn cục để kiểm soát việc chuyển đổi giữa các modal
+    window.isSwappingModal = false;
+
+    var manageModal = document.getElementById('manageMembersModal');
+    if (manageModal) {
+        manageModal.addEventListener('hidden.bs.modal', function (event) {
+            // Nếu đang trong quá trình chuyển sang modal khác thì KHÔNG reload
+            if (window.isSwappingModal) {
+                window.isSwappingModal = false; // Reset lại trạng thái
+                return;
+            }
+            // Nếu tắt thực sự thì mới reload
+            location.reload();
+        });
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,96 @@
+<div id="participants-manager-{{ event.event_id }}" class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Quản lý nhân sự: {{ event.name }}</h5>
+        <div class="dropdown">
+            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-plus-fill"></i> Thêm nhân sự
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="#" 
+                        onclick="window.isSwappingModal = true;"
+                        hx-get="/events/partials/events/{{ event.event_id }}/candidates?role_to_add=instructor" 
+                        hx-target="#modal-select-users-body" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#addParticipantModal">
+                        Thêm Giảng viên ({{ current_instructor_count }}/{{ event.max_instructor }})
+                    </a>            
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" 
+                        onclick="window.isSwappingModal = true;"
+                        hx-get="/events/partials/events/{{ event.event_id }}/candidates?role_to_add=teaching_assistant" 
+                        hx-target="#modal-select-users-body" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#addParticipantModal">
+                        Thêm Trợ giảng ({{ current_ta_count }}/{{ event.max_teaching_assistant }})
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 border-end">
+                <h6 class="text-primary fw-bold">Giảng viên (Instructor)</h6>
+                <ul class="list-group list-group-flush">
+                    {% for p in instructors %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ p.user.full_name }}</strong> <br>
+                            <small class="text-muted">{{ p.user.email }}</small>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm rounded-circle"
+                                hx-delete="/events/partials/events/{{ event.event_id }}/participants/{{ p.user.user_id }}"
+                                hx-confirm="Bạn có chắc muốn xóa giảng viên này?"
+                                hx-target="#participants-manager-{{ event.event_id }}"
+                                hx-swap="outerHTML">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted fst-italic">Chưa có giảng viên</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="col-md-6">
+                <h6 class="text-success fw-bold">Trợ giảng (Teaching Assistant)</h6>
+                <ul class="list-group list-group-flush">
+                    {% for p in tas %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ p.user.full_name }}</strong> <br>
+                            <small class="text-muted">{{ p.user.email }}</small>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm rounded-circle"
+                                hx-delete="/events/partials/events/{{ event.event_id }}/participants/{{ p.user.user_id }}"
+                                hx-confirm="Bạn có chắc muốn xóa trợ giảng này?"
+                                hx-target="#participants-manager-{{ event.event_id }}"
+                                hx-swap="outerHTML">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted fst-italic">Chưa có trợ giảng</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addParticipantModal-{{ event.event_id }}" tabindex="-1" aria-hidden="true" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">Chọn thành viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-content-{{ event.event_id }}">
+                <div class="text-center"><div class="spinner-border text-primary"></div></div>
+            </div>
+        </div>
+    </div>
+</div>

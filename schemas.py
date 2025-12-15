@@ -252,3 +252,11 @@ class EventResponse(EventBase):
     
     class Config:
         from_attributes = True
+
+# ==========================================
+# 2. USER EVENT SCHEMAS
+# ==========================================
+
+class ParticipantAddRequest(BaseModel):
+    user_ids: List[int]
+    role: str # 'instructor' hoặc 'teaching_assistant'
