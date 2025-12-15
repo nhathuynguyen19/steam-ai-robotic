@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Request, Depends, Form, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Request, Depends, Form, status, HTTPException, Query
+from fastapi.responses import RedirectResponse, Response, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, not_
 from sqlalchemy.orm import Session
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 from datetime import date
-
 import database
 import models
 import schemas
 import helpers.security as security
 from fastapi import HTTPException
 from routers.api.events import PERIOD_START_TIMES, PERIOD_END_TIMES
+from fastapi.responses import HTMLResponse
+from models import User, Event, UserEvent, EventRole
+from helpers.security import get_current_admin_from_cookie
+
 
 # Định nghĩa đường dẫn tới thư mục templates
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -219,3 +223,201 @@ async def update_event_action(
                 "period_end_times": PERIOD_END_TIMES
             }
         ) 
+
+# --- 1. API Trả về giao diện quản lý người tham gia (HTML) ---
+@router.get("/partials/events/{event_id}/manage", response_class=HTMLResponse)
+async def get_event_participants_manager(
+    request: Request, 
+    event_id: int, 
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_admin_from_cookie)
+):
+    if current_user.role != schemas.UserRole.ADMIN.value:
+        return Response(content="Unauthorized", status_code=403)
+
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    if not event:
+        return Response(content="Event not found", status_code=404)
+
+    # Lấy danh sách Instructor và TA
+    instructors = db.query(UserEvent).filter(UserEvent.event_id == event_id, UserEvent.role == 'instructor').all()
+    tas = db.query(UserEvent).filter(UserEvent.event_id == event_id, UserEvent.role == 'teaching_assistant').all()
+
+    return templates.TemplateResponse("partials/event_participants_manager.html", {
+        "request": request,
+        "event": event,
+        "instructors": instructors,
+        "tas": tas,
+        "current_instructor_count": len(instructors),
+        "current_ta_count": len(tas)
+    })
+    
+    # [QUAN TRỌNG] Thêm Header báo trình duyệt KHÔNG được cache HTML này
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
+    return response
+
+# --- 2. API Xóa User khỏi Event ---
+@router.delete("/partials/events/{event_id}/participants/{user_id}", response_class=HTMLResponse)
+async def remove_participant(
+    request: Request, event_id: int, user_id: int, 
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_admin_from_cookie)
+):
+    if current_user.role != schemas.UserRole.ADMIN.value:
+        return Response(status_code=403)
+        
+    db.query(UserEvent).filter(UserEvent.event_id == event_id, UserEvent.user_id == user_id).delete()
+    db.commit()
+    
+    # [QUAN TRỌNG] Xóa cache của SQLAlchemy session để lần query tiếp theo lấy data mới nhất
+    db.expire_all()
+    
+    # Reload lại toàn bộ khung quản lý
+    return await get_event_participants_manager(request, event_id, db, current_user)
+
+# --- 3. API Lấy danh sách User CHƯA tham gia để hiện Modal (Có phân trang & Search) ---
+@router.get("/partials/events/{event_id}/candidates", response_class=HTMLResponse)
+async def get_candidate_users(
+    request: Request, 
+    event_id: int, 
+    role_to_add: str, # 'instructor' hoặc 'teaching_assistant'
+    q: Optional[str] = None,
+    page: int = 1,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_admin_from_cookie)
+):
+    if current_user.role != schemas.UserRole.ADMIN.value: return Response(status_code=403)
+    
+    limit = 10
+    skip = (page - 1) * limit
+
+    # Lấy danh sách ID đã tham gia
+    # joined_ids = db.query(UserEvent.user_id).filter(UserEvent.event_id == event_id).subquery()
+
+    # [ĐÚNG - Sửa lại như sau]
+    # Xóa .subquery(), để nguyên câu query. SQLAlchemy sẽ tự động biên dịch nó thành sub-select chuẩn.
+    joined_ids = db.query(models.UserEvent.user_id).filter(models.UserEvent.event_id == event_id)
+    
+    # Query user chưa tham gia
+    query = db.query(models.User).filter(
+        not_(models.User.user_id.in_(joined_ids)), 
+        models.User.is_deleted == False
+    )
+
+    if q:
+        search = f"%{q}%"
+        query = query.filter(User.full_name.ilike(search) | User.email.ilike(search))
+
+    total = query.count()
+    users = query.offset(skip).limit(limit).all()
+    total_pages = (total + limit - 1) // limit
+
+    return templates.TemplateResponse("partials/modal_select_users.html", {
+        "request": request,
+        "event_id": event_id,
+        "users": users,
+        "page": page,
+        "total_pages": total_pages,
+        "q": q,
+        "role_to_add": role_to_add
+    })
+
+# --- 4. API Thêm Users vào Event (Xử lý Logic & Validate) ---
+@router.post("/partials/events/{event_id}/participants", response_class=HTMLResponse)
+async def add_participants(
+    request: Request,
+    event_id: int,
+    user_ids: List[int] = Form(...), # Nhận list ID từ checkbox
+    role: str = Form(...),
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_admin_from_cookie)
+):
+    if current_user.role != schemas.UserRole.ADMIN.value: return Response(status_code=403)
+
+    event = db.query(Event).filter(Event.event_id == event_id).first()
+    
+    # Kiểm tra số lượng
+    current_count = db.query(UserEvent).filter(UserEvent.event_id == event_id, UserEvent.role == role).count()
+    
+    max_allowed = event.max_instructor if role == 'instructor' else event.max_teaching_assistant
+    # Handle trường hợp max_instructor có thể là None (nếu model cho phép) hoặc 0
+    max_allowed = max_allowed if max_allowed is not None else 999 
+
+    # Nếu vượt quá giới hạn -> Trả về lỗi vào div #form-errors (Không đóng modal)
+    if current_count + len(user_ids) > max_allowed:
+        error_msg = f"Đã chọn {len(user_ids)} người. Tổng sẽ là {current_count + len(user_ids)}, vượt quá giới hạn ({max_allowed}). Vui lòng bỏ bớt."
+        return Response(
+            content=f"""
+            <div class="alert alert-danger d-flex align-items-center mb-0">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>{error_msg}</div>
+            </div>
+            """,
+            media_type="text/html"
+        )
+
+    # Thêm user
+    for uid in user_ids:
+        new_member = UserEvent(event_id=event_id, user_id=uid, role=role, status="registered")
+        db.add(new_member)
+    
+    db.commit()
+    
+    # [QUAN TRỌNG] Làm mới session
+    db.expire_all()
+    
+    # 3. Chuẩn bị dữ liệu để render lại danh sách quản lý (Modal 1)
+    instructors = db.query(models.UserEvent).filter(models.UserEvent.event_id == event_id, models.UserEvent.role == 'instructor').all()
+    tas = db.query(models.UserEvent).filter(models.UserEvent.event_id == event_id, models.UserEvent.role == 'teaching_assistant').all()
+
+    # Render template Modal 1 (Manager)
+    # Lưu ý: 'templates' phải là biến Jinja2Templates đã khai báo ở đầu file
+    manager_html = templates.get_template("partials/event_participants_manager.html").render({
+        "request": request,
+        "event": event,
+        "instructors": instructors,
+        "tas": tas,
+        "current_instructor_count": len(instructors),
+        "current_ta_count": len(tas)
+    })
+
+    # 4. Trả về Response kết hợp (OOB Swap)
+    # - Cập nhật nội dung Modal 1 (#manageMembersModalBody)
+    # - Xóa thông báo lỗi cũ (nếu có)
+    # - Chạy script đóng Modal 2 (#addParticipantModal)
+    
+    combined_response = f"""
+    <div id="manageMembersModalBody" hx-swap-oob="true">
+        {manager_html}
+    </div>
+
+    <div id="form-errors" hx-swap-oob="true"></div>
+
+    <script>
+        // Đóng modal chọn user
+        var selectModalEl = document.getElementById('addParticipantModal');
+        var selectModal = bootstrap.Modal.getInstance(selectModalEl);
+        if (selectModal) {{ selectModal.hide(); }}
+        
+        // [QUAN TRỌNG] Mở lại modal quản lý (vì nó đã bị ẩn khi mở modal chọn user)
+        var manageModalEl = document.getElementById('manageMembersModal');
+        var manageModal = bootstrap.Modal.getOrCreateInstance(manageModalEl);
+        manageModal.show();
+
+        // Fix các lỗi backdrop còn sót lại của Bootstrap
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        // Thêm lại backdrop mới cho modal vừa mở
+        if (!document.querySelector('.modal-backdrop')) {{
+             var backdrop = document.createElement('div');
+             backdrop.className = 'modal-backdrop fade show';
+             document.body.appendChild(backdrop);
+        }}
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
+    </script>
+    """
+    
+    return Response(content=combined_response, media_type="text/html")
