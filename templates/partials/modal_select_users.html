@@ -1,0 +1,67 @@
+<div id="form-errors" class="mb-3"></div>
+
+<div class="d-flex justify-content-between mb-3">
+    <input type="text" class="form-control w-75" placeholder="Tìm tên hoặc email..." 
+           name="q" value="{{ q or '' }}"
+           hx-get="/events/partials/events/{{ event_id }}/candidates?role_to_add={{ role_to_add }}" 
+           hx-trigger="keyup changed delay:500ms" 
+           hx-target="#modal-select-users-body"> 
+</div>
+
+<form hx-post="/events/partials/events/{{ event_id }}/participants" 
+      hx-target="#form-errors" 
+      hx-swap="innerHTML">
+    
+    <input type="hidden" name="role" value="{{ role_to_add }}">
+
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col" width="5%"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+                    <th scope="col">Họ tên</th>
+                    <th scope="col">Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><input type="checkbox" name="user_ids" value="{{ user.user_id }}" class="user-checkbox"></td>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.email }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="text-center">Không tìm thấy thành viên phù hợp</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-center mt-2">
+        {% for p in range(1, total_pages + 1) %}
+        <button type="button" class="btn btn-sm btn-outline-secondary mx-1 {% if p == page %}active{% endif %}"
+                hx-get="/events/partials/events/{{ event_id }}/candidates?role_to_add={{ role_to_add }}&page={{ p }}&q={{ q or '' }}"
+                hx-target="#modal-select-users-body">
+            {{ p }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mt-3 text-end sticky-bottom bg-white py-2 border-top">
+        <button type="button" class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#manageMembersModal">Hủy</button>
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Thêm các mục đã chọn
+        </button>
+    </div>
+</form>
+
+<script>
+    function toggleAll(source) {
+        checkboxes = document.getElementsByClassName('user-checkbox');
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+</script>
